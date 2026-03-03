@@ -1,0 +1,1223 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Activity, 
+  Cpu, 
+  Zap, 
+  Terminal, 
+  ShieldCheck, 
+  Wallet, 
+  Plus, 
+  Play, 
+  AlertTriangle,
+  Server,
+  Code,
+  CheckCircle,
+  Database,
+  Sparkles, 
+  MessageSquare,
+  X,
+  BrainCircuit, 
+  FileText,
+  Lock,
+  ArrowRightLeft,
+  TrendingUp,
+  CreditCard,
+  Layers,
+  Globe,
+  Settings,
+  Filter,
+  Save,
+  Trash2,
+  Wifi,
+  Stethoscope,
+  PowerOff,
+  ArrowUpCircle,
+  ActivitySquare,
+  Smartphone,
+  Monitor,
+  Target,
+  ShieldAlert,
+  Radio,
+  Sliders,
+  Rocket,
+  Beaker,
+  Fingerprint,
+  Code2,
+  PenTool,
+  Loader2
+} from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  Radar, 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  PolarRadiusAxis,
+  BarChart,
+  Bar,
+  Legend
+} from 'recharts';
+
+/**
+ * BONAS ebot Nexus - Operational Control Plane
+ * Version: 8.1 - Invisible Mobile Scroll & Advanced Studio
+ */
+
+// --- ASSETS & ANIMATED COMPONENTS ---
+
+const AnimatedLogo = ({ size = 40 }) => (
+  <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <svg className="absolute w-full h-full animate-spin-slow" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="18" stroke="#6366f1" strokeWidth="1" strokeDasharray="4 4" strokeOpacity="0.5" />
+      <circle cx="20" cy="2" r="2" fill="#818cf8" />
+      <circle cx="20" cy="38" r="2" fill="#818cf8" />
+    </svg>
+    <svg className="absolute w-[60%] h-[60%] animate-pulse-slow" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#6366f1" fillOpacity="0.8" />
+      <path d="M2 17L12 22L22 17" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 7V17" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M22 7V17" stroke="#818cf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </div>
+);
+
+const NetworkIllustration = ({ isFaultActive, riskLevel, optStrategy }) => {
+  const getGlowColor = () => {
+    if (riskLevel > 70) return "fill-red-900/20 stroke-red-500";
+    if (riskLevel > 30) return "fill-amber-900/20 stroke-amber-500";
+    return "fill-indigo-900/20 stroke-indigo-500";
+  };
+  
+  const getParticleSpeed = () => {
+      if (optStrategy === 'EXTREMUM') return "0.5s";
+      if (optStrategy === 'HEURISTIC') return "4s";
+      return riskLevel > 50 ? "1s" : "2s"; // PID default
+  }
+
+  return (
+    <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+      <svg className="w-full h-full preserve-3d">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <line x1="20%" y1="50%" x2="50%" y2="20%" stroke="#4f46e5" strokeWidth="1" />
+        <line x1="80%" y1="50%" x2="50%" y2="20%" stroke="#4f46e5" strokeWidth="1" />
+        <line x1="20%" y1="50%" x2="50%" y2="80%" stroke="#4f46e5" strokeWidth="1" />
+        <line x1="80%" y1="50%" x2="50%" y2="80%" stroke="#4f46e5" strokeWidth="1" />
+        <circle r="3" fill="#fff" filter="url(#glow)">
+          <animateMotion dur={getParticleSpeed()} repeatCount="indefinite" path="M 200 300 L 500 120" />
+        </circle>
+        <circle r="3" fill="#fff" filter="url(#glow)">
+          <animateMotion dur={getParticleSpeed()} repeatCount="indefinite" path="M 800 300 L 500 120" />
+        </circle>
+        <circle cx="50%" cy="50%" r="40" fill="url(#centerGrad)" filter="url(#glow)" className={`${getGlowColor()} ${isFaultActive ? 'animate-pulse' : ''}`} strokeWidth="2" />
+        <radialGradient id="centerGrad">
+          <stop offset="0%" stopColor="#4f46e5" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#1e1b4b" stopOpacity="0" />
+        </radialGradient>
+      </svg>
+    </div>
+  );
+};
+
+// --- MOCK DATA ---
+const generateTimeLabel = () => {
+  const d = new Date();
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+};
+
+export default function BonasNexus() {
+  // --- VIEWPORT STATE ---
+  const [isMobileMode, setIsMobileMode] = useState(false);
+
+  // --- APP STATE ---
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [agents, setAgents] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [apiKey, setApiKey] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+
+  // DEV STUDIO STATE
+  const [agentTemplates, setAgentTemplates] = useState([
+    { id: 'nrg-01', name: 'EnergyMiner', type: 'OPTIMIZER', target: 'Grid Power', cost: 5, rewardRate: 2.5, color: '#10b981', creator: 'System', royalty: 0 },
+    { id: 'lat-99', name: 'LatencyKiller', type: 'DIAGNOSTIC', target: 'Network I/O', cost: 8, rewardRate: 4.0, color: '#3b82f6', creator: 'System', royalty: 0 },
+    { id: 'sql-opt', name: 'QueryTuner', type: 'HARVESTER', target: 'Postgres DB', cost: 2, rewardRate: 1.2, color: '#f59e0b', creator: 'System', royalty: 0 },
+  ]);
+
+  const [ePurse, setEPurse] = useState({
+    liquid: 1250.00,
+    staked: 500.00,
+    escrow: 150.00,
+    totalMined: 3420.50,
+    gasBurned: 120.40
+  });
+
+  // --- SLA, STOCHASTIC & OPTIMIZATION STATE ---
+  const [efficiencyData, setEfficiencyData] = useState([]);
+  const [isFaultActive, setIsFaultActive] = useState(false);
+  const [stochasticRisk, setStochasticRisk] = useState(12); 
+  const [slaTarget, setSlaTarget] = useState(85); 
+  const [activeBounties, setActiveBounties] = useState([]);
+  
+  const [optStrategy, setOptStrategy] = useState('PID'); 
+  
+  const [faultStartTime, setFaultStartTime] = useState(null);
+  const [mttr, setMttr] = useState(4.2); 
+  const [anomalies, setAnomalies] = useState([
+    { id: 1, time: '10:42:15', component: 'HVAC-04', issue: 'Thermal Drift', status: 'RESOLVED' }
+  ]);
+
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedActiveAgent, setSelectedActiveAgent] = useState(null); 
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [showExchangeModal, setShowExchangeModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [exchangeAmount, setExchangeAmount] = useState('');
+
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGeneratingAgent, setIsGeneratingAgent] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [logSummary, setLogSummary] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [strategyAdvice, setStrategyAdvice] = useState(null);
+  const [isStrategizing, setIsStrategizing] = useState(false);
+  
+  const [manualAgent, setManualAgent] = useState({
+    name: '', type: 'OPTIMIZER', target: '', cost: 5, rewardRate: 2.0, color: '#6366f1', royalty: 5, logic: 'function evaluate(telemetry) {\n  return telemetry.entropy > 0.8;\n}'
+  });
+  const [isTestingEbot, setIsTestingEbot] = useState(false);
+  const [isBuildingManual, setIsBuildingManual] = useState(false);
+  const [logFilter, setLogFilter] = useState('ALL');
+
+  const logEndRef = useRef(null);
+
+  // --- CORE LOGIC ---
+  const addLog = (source, message, type = 'INFO') => {
+    const newLog = { id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, time: generateTimeLabel(), source, message, type };
+    setLogs(prev => [newLog, ...prev].slice(0, 150));
+  };
+
+  const BonasAPI = {
+    logRequest: (method, endpoint, status = 200) => {
+        addLog('API-GATEWAY', `${method} https://api.bonas.io/v1${endpoint} [${status}]`, 'INFO');
+    },
+    async registerEbotIP(payload) {
+        this.logRequest('POST', '/dev/mint-ip', 201);
+        return new Promise(resolve => setTimeout(resolve, 1500));
+    },
+    async deployAgent(payload) {
+        this.logRequest('POST', '/agents/deploy', 202);
+        return new Promise(resolve => setTimeout(resolve, 800)); 
+    },
+    async stakeTokens(amount, purpose) {
+        this.logRequest('POST', '/wallet/stake', 201);
+        return new Promise(resolve => setTimeout(resolve, 500));
+    },
+    async retireAgent(agentId) {
+        this.logRequest('DELETE', `/agents/${agentId}`, 200);
+        return new Promise(resolve => setTimeout(resolve, 500));
+    },
+    connectStream() {
+        addLog('SYSTEM', 'Connecting to wss://api.bonas.io/v1/stream/live...', 'INFO');
+        setTimeout(() => addLog('SYSTEM', 'WebSocket Connected. Listening for Stochastic Events.', 'SUCCESS'), 1000);
+    }
+  };
+
+  useEffect(() => {
+    const storedKey = localStorage.getItem('bonas_gemini_key');
+    if (storedKey) setApiKey(storedKey);
+    BonasAPI.logRequest('POST', '/auth/login', 200);
+    BonasAPI.connectStream();
+
+    const handleResize = () => {
+      if (window.innerWidth < 768) setIsMobileMode(true);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const saveApiKey = (key) => {
+    setApiKey(key);
+    localStorage.setItem('bonas_gemini_key', key);
+    setShowSettings(false);
+    addLog('SYSTEM', 'API Key updated successfully.', 'SUCCESS');
+  };
+
+  // --- ACTIONS ---
+  const deployAgent = async (template) => {
+    if (ePurse.liquid < template.cost) {
+        addLog('EPURSE', `Deployment failed: Insufficient liquid OPS.`, 'ERROR');
+        return;
+    }
+    
+    let currentRewardRate = template.rewardRate;
+    if (activeBounties.length > 0) {
+        addLog('SMART-CONTRACT', `Bounty claimed! Network volatility premium applied.`, 'SUCCESS');
+        setActiveBounties(prev => prev.slice(1)); 
+        currentRewardRate *= 1.5; 
+    }
+
+    await BonasAPI.stakeTokens(template.cost, "AGENT_DEPLOYMENT_BOND");
+    await BonasAPI.deployAgent({ templateId: template.id, name: template.name });
+
+    setEPurse(prev => ({ ...prev, liquid: prev.liquid - template.cost, staked: prev.staked + template.cost }));
+    const newAgent = { 
+        ...template, 
+        rewardRate: currentRewardRate,
+        instanceId: `${template.id || 'gen'}-${Math.floor(Math.random()*1000)}`, 
+        status: 'BOOTING', 
+        uptime: 0, 
+        earned: 0,
+        spent: 0, 
+        level: 1 
+    };
+    
+    setAgents(prev => [...prev, newAgent]);
+    addLog('NEXUS', `Deploying ${newAgent.name}...`, 'INFO');
+    
+    setTimeout(() => {
+        setAgents(prev => prev.map(a => a.instanceId === newAgent.instanceId ? { ...a, status: 'ACTIVE' } : a));
+        addLog(newAgent.name, 'Connected to Telemetry Stream.', 'SUCCESS');
+    }, 2000);
+  };
+
+  const handleRetireAgent = async (agent) => {
+      await BonasAPI.retireAgent(agent.instanceId);
+      setAgents(prev => prev.filter(a => a.instanceId !== agent.instanceId));
+      setEPurse(prev => ({ ...prev, staked: prev.staked - agent.cost, liquid: prev.liquid + agent.cost }));
+      addLog('NEXUS', `Retired ${agent.name}. Bond returned.`, 'INFO');
+      setSelectedActiveAgent(null);
+  };
+
+  const injectFault = () => {
+    if(!isFaultActive) {
+        setIsFaultActive(true);
+        setFaultStartTime(Date.now());
+        addLog('SIMUVERSE', 'CRITICAL ALERT: Physical Entropy Detected (Markov S2 Transition).', 'ERROR');
+        setAnomalies(prev => [{ id: Date.now(), time: generateTimeLabel(), component: 'Dynamic Node', issue: 'System Entropy Spike', status: 'ACTIVE' }, ...prev.slice(0, 4)]);
+    }
+  };
+
+  const handleTestAndMint = async () => {
+    const mintCost = 25; 
+    if (ePurse.liquid < mintCost) {
+        addLog('DEV-STUDIO', 'Mint failed: Insufficient liquid OPS for IP Registration (25 OPS required).', 'ERROR');
+        return;
+    }
+
+    setIsTestingEbot(true);
+    addLog('DEV-STUDIO', 'Simulating logic boundaries in sandbox environment...', 'INFO');
+    
+    setTimeout(async () => {
+        addLog('DEV-STUDIO', 'Simulation passed. SLA thresholds verified.', 'SUCCESS');
+        addLog('SMART-CONTRACT', 'Initiating ebot IP tokenization on-chain...', 'INFO');
+        
+        await BonasAPI.registerEbotIP(manualAgent);
+
+        setEPurse(prev => ({...prev, liquid: prev.liquid - mintCost, gasBurned: prev.gasBurned + mintCost}));
+        
+        const newTemplate = {
+            id: `dev-${Date.now().toString().slice(-4)}`,
+            name: manualAgent.name || "Custom Agent",
+            type: manualAgent.type,
+            target: manualAgent.target || "General",
+            cost: Number(manualAgent.cost),
+            rewardRate: Number(manualAgent.rewardRate),
+            color: manualAgent.color,
+            creator: 'Local Dev (You)',
+            royalty: Number(manualAgent.royalty)
+        };
+        
+        setAgentTemplates(prev => [...prev, newTemplate]);
+        addLog('DEV-STUDIO', `Successfully tokenized ${newTemplate.name} IP. Added to Forge.`, 'SUCCESS');
+        setIsTestingEbot(false);
+        setIsBuildingManual(false);
+    }, 2000);
+  };
+
+  const handleManualSurge = () => {
+      const surgeCost = 50;
+      if (ePurse.liquid < surgeCost) {
+          addLog('OPTIMIZATION', 'Surge Failed: Insufficient OPS balance.', 'ERROR');
+          return;
+      }
+      setEPurse(prev => ({...prev, liquid: prev.liquid - surgeCost, gasBurned: prev.gasBurned + surgeCost}));
+      addLog('OPTIMIZATION', `Manual Surge Executed (-${surgeCost} OPS). Flushing system entropy...`, 'SUCCESS');
+      
+      setIsFaultActive(false);
+      setStochasticRisk(Math.max(12, stochasticRisk - 40));
+      setEfficiencyData(prev => {
+          const newData = [...prev, { time: generateTimeLabel(), efficiency: 100, baseline: slaTarget }];
+          if (newData.length > 20) newData.shift();
+          return newData;
+      });
+      if (faultStartTime) {
+          setFaultStartTime(null);
+          setAnomalies(prev => prev.map(a => a.status === 'ACTIVE' ? {...a, status: 'RESOLVED'} : a));
+      }
+  };
+
+  const handleDeposit = async () => {
+    if (!depositAmount) return;
+    const amount = parseFloat(depositAmount);
+    addLog('BRIDGE', 'Initiating Fiat-to-Token Bridge...', 'INFO');
+    setEPurse(prev => ({ ...prev, liquid: prev.liquid + amount }));
+    addLog('EPURSE', `Liquidity Injection: +${amount} OPS`, 'SUCCESS');
+    setShowDepositModal(false);
+    setDepositAmount('');
+  };
+
+  const handleExchange = () => {
+    if (!exchangeAmount) return;
+    const amount = parseFloat(exchangeAmount);
+    if (amount > ePurse.liquid) {
+        addLog('EPURSE', 'Exchange failed: Insufficient funds.', 'ERROR');
+        return;
+    }
+    BonasAPI.logRequest('GET', '/market/rates', 200);
+    setEPurse(prev => ({ ...prev, liquid: prev.liquid - amount }));
+    addLog('EPURSE', `Swapped ${amount} OPS for USDC.`, 'INFO');
+    setShowExchangeModal(false);
+    setExchangeAmount('');
+  };
+
+  // --- SIMULATION LOOP ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let newRisk = stochasticRisk;
+      if (isFaultActive) newRisk = Math.min(100, newRisk + (Math.random() * 8));
+      else newRisk = Math.max(12, newRisk - (Math.random() * 5));
+      setStochasticRisk(newRisk);
+
+      let currentSla = slaTarget;
+      if (newRisk > 65 && slaTarget === 85) {
+          currentSla = 75;
+          setSlaTarget(75);
+          addLog('HEURISTIC', 'Risk > 65%. Triggering Graceful Degradation. Target SLA lowered to 75%.', 'WARNING');
+          if (agents.filter(a=>a.status === 'ACTIVE').length < 3) {
+              setActiveBounties(prev => [...prev, { id: Date.now(), reward: 50, task: "Mitigate Entropy" }]);
+              addLog('HEURISTIC', 'Local Entropy High. Broadcasting Swarm Bounty.', 'INFO');
+          }
+      } else if (newRisk < 40 && slaTarget === 75) {
+          currentSla = 85;
+          setSlaTarget(85);
+          addLog('HEURISTIC', 'Risk normalized. Target SLA restored to Optimal (85%).', 'SUCCESS');
+      }
+
+      let currentEff = isFaultActive ? Math.random() * 20 + 40 : Math.random() * 5 + 90; 
+      const activeOptimizers = agents.filter(a => a.status === 'ACTIVE' && a.type === 'OPTIMIZER');
+      
+      if (isFaultActive && activeOptimizers.length > 0) {
+        let recoveryStep = 0;
+        if (optStrategy === 'HEURISTIC') recoveryStep = activeOptimizers.length * 5; 
+        else if (optStrategy === 'PID') recoveryStep = Math.max(2, Math.max(0, currentSla - currentEff) * 0.15 * activeOptimizers.length); 
+        else if (optStrategy === 'EXTREMUM') recoveryStep = activeOptimizers.length * 25; 
+
+        currentEff += recoveryStep; 
+        
+        if (currentEff >= currentSla) { 
+            currentEff = Math.max(currentEff, currentSla + 2);
+            setIsFaultActive(false); 
+            addLog('OPTIMIZATION', `Fault resolved via ${optStrategy} logic meeting SLA (${currentSla}%).`, 'SUCCESS');
+            if (faultStartTime) {
+                const repairTime = (Date.now() - faultStartTime) / 1000;
+                setMttr(prev => ((prev * 4) + repairTime) / 5); 
+                setFaultStartTime(null);
+                setAnomalies(prev => prev.map(a => a.status === 'ACTIVE' ? {...a, status: 'RESOLVED'} : a));
+            }
+        }
+      }
+
+      setEfficiencyData(prev => {
+        const newData = [...prev, { time: generateTimeLabel(), efficiency: currentEff, baseline: currentSla }];
+        if (newData.length > 20) newData.shift();
+        return newData;
+      });
+
+      if (agents.length > 0) {
+        let cycleRevenue = 0;
+        let cycleGas = 0;
+        
+        setAgents(prev => prev.map(agent => {
+            if (agent.status === 'ACTIVE') {
+                let agentGas = 0.05;
+                if (agent.type === 'OPTIMIZER') {
+                    if (optStrategy === 'HEURISTIC') agentGas *= 0.5;
+                    else if (optStrategy === 'EXTREMUM') agentGas *= 3.0;
+                }
+                cycleGas += agentGas;
+                
+                if (currentEff >= currentSla) {
+                    let reward = agent.rewardRate;
+                    if (newRisk > 50) reward *= 1.25; 
+                    cycleRevenue += reward;
+                    return { ...agent, earned: (agent.earned || 0) + reward, spent: (agent.spent || 0) + agentGas };
+                }
+                return { ...agent, spent: (agent.spent || 0) + agentGas };
+            }
+            return agent;
+        }));
+
+        setEPurse(prev => ({
+            ...prev,
+            liquid: prev.liquid + cycleRevenue - cycleGas,
+            totalMined: prev.totalMined + cycleRevenue,
+            gasBurned: prev.gasBurned + cycleGas
+        }));
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [agents, isFaultActive, faultStartTime, stochasticRisk, slaTarget, optStrategy]);
+
+
+  // --- UI COMPONENT BLOCKS ---
+  const GlassCard = ({ children, className = "", onClick }) => (
+    <div onClick={onClick} className={`bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl ${className}`}>
+      {children}
+    </div>
+  );
+
+  const KPI = ({ label, value, sub, color, icon: Icon }) => (
+    <GlassCard className={`p-4 md:p-6 relative overflow-hidden group border-l-4`} style={{borderLeftColor: color}}>
+      <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-white/5 rounded-full blur-2xl md:blur-3xl -mr-12 -mt-12 md:-mr-16 md:-mt-16 group-hover:bg-white/10 transition-all duration-500"></div>
+      <div className="flex justify-between items-start relative z-10">
+        <div>
+          <div className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mb-1 md:mb-2">{label}</div>
+          <div className={`text-2xl md:text-3xl font-bold mb-0.5 md:mb-1 tracking-tight drop-shadow-md`} style={{ color }}>{value}</div>
+          <div className="text-gray-500 text-[10px] md:text-xs font-medium">{sub}</div>
+        </div>
+        {Icon && <div className="p-2 md:p-3 bg-white/5 rounded-xl border border-white/10 text-gray-400"><Icon size={isMobileMode ? 16 : 20} /></div>}
+      </div>
+    </GlassCard>
+  );
+
+  const Modal = ({ title, isOpen, onClose, children }) => {
+    if (!isOpen) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <GlassCard className={`w-full max-w-md p-6 border-indigo-500/30 bg-[#0a0a0f] max-h-[90vh] overflow-y-auto ${isMobileMode ? 'hide-scroll' : 'scrollbar-thin'}`}>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg md:text-xl font-bold text-white">{title}</h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
+          </div>
+          {children}
+        </GlassCard>
+      </div>
+    );
+  };
+
+  const radarData = [
+    { subject: 'CPU', A: 120, fullMark: 150 },
+    { subject: 'Memory', A: 98, fullMark: 150 },
+    { subject: 'I/O', A: isFaultActive ? 140 : 60, fullMark: 150 },
+    { subject: 'Power', A: isFaultActive ? 130 : 80, fullMark: 150 },
+    { subject: 'Temp', A: isFaultActive ? 145 : 70, fullMark: 150 },
+  ];
+
+  // --- GEMINI FUNCTIONS ---
+  const runAiStrategy = async () => {
+    if (!apiKey) { setShowSettings(true); return; }
+    setIsStrategizing(true);
+    try {
+      const currentEff = efficiencyData.length > 0 ? efficiencyData[efficiencyData.length-1].efficiency : 0;
+      const agentSummary = agents.map(a => `${a.name} (${a.type})`).join(', ');
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `You are the Strategic Core of the BONAS system.
+                Current Efficiency: ${currentEff.toFixed(1)}%
+                Active Fault: ${isFaultActive ? 'Yes' : 'None'}
+                Optimization Strategy: ${optStrategy}
+                Wallet Balance: ${ePurse.liquid}
+                Active Agents: ${agentSummary || "None"}
+                
+                Provide a short strategic recommendation (max 2 sentences). Suggest changing the Optimization Strategy if necessary.`
+              }]
+            }]
+          })
+        }
+      );
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API Error");
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      setStrategyAdvice(typeof resultText === 'string' ? resultText : "Strategy unavailable.");
+    } catch (error) { setStrategyAdvice(`Strategic core offline: ${error.message}`); }
+    setIsStrategizing(false);
+  };
+
+  const callGeminiAnalysisInternal = async (currentLogs, efficiency) => {
+    try {
+      const recentLogs = currentLogs.slice(0, 10).map(l => `${l.source}: ${l.message}`).join('\n');
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `You are the AI diagnostic core of the BONAS system. Analyze the following system state and provide a brief Root Cause Analysis (RCA) and a recommendation.
+                
+                Current Efficiency: ${Math.round(efficiency)}% (Baseline: 85%)
+                Fault Active: ${isFaultActive ? 'Yes' : 'None'}
+                Recent Logs:
+                ${recentLogs}
+                
+                Keep response under 50 words. Focus on technical clarity.`
+              }]
+            }]
+          })
+        }
+      );
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API Error");
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      return typeof resultText === 'string' ? resultText : "Analysis unavailable.";
+    } catch (error) { return `Analysis unavailable: ${error.message}`; }
+  };
+
+  const runAiAnalysis = async () => {
+    if (!apiKey) { setShowSettings(true); return; }
+    setIsAnalyzing(true);
+    BonasAPI.logRequest('POST', '/diagnostics/report', 200);
+    const currentEff = efficiencyData.length > 0 ? efficiencyData[efficiencyData.length-1].efficiency : 0;
+    const analysis = await callGeminiAnalysisInternal(logs, currentEff);
+    setAiAnalysis(analysis);
+    setIsAnalyzing(false);
+  };
+
+  const runAiLogSummary = async () => {
+    if (logs.length === 0) return;
+    if (!apiKey) { setShowSettings(true); return; }
+    setIsSummarizing(true);
+    try {
+      const logText = logs.slice(0, 20).map(l => `[${l.time}] ${l.source}: ${l.message}`).join('\n');
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Summarize the following system logs into 3 concise bullet points focusing on system health and agent activity.
+                Logs:
+                ${logText}`
+              }]
+            }]
+          })
+        }
+      );
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API Error");
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      setLogSummary(typeof resultText === 'string' ? resultText : "Summary unavailable.");
+    } catch (error) { setLogSummary(`Unable to summarize logs: ${error.message}`); }
+    setIsSummarizing(false);
+  };
+
+  const callGeminiGenerator = async (prompt) => {
+    if (!apiKey) { setShowSettings(true); addLog('AI-FORGE', 'API Key Missing.', 'ERROR'); return null; }
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Create a JSON configuration for a BONAS ebot agent based on this description: "${prompt}". 
+                The JSON must have the following fields: 
+                - name (string, creative name)
+                - type (one of: OPTIMIZER, DIAGNOSTIC, HARVESTER)
+                - target (string, e.g., "SQL Database", "Cooling System")
+                - cost (number between 1-10)
+                - rewardRate (number between 0.5-5.0)
+                - color (hex string)
+                Return ONLY the JSON object, no markdown.`
+              }]
+            }],
+            generationConfig: { responseMimeType: "application/json" }
+          })
+        }
+      );
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error.message || "API Error");
+      
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text || typeof text !== 'string') throw new Error("No valid text response from API");
+      
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      return JSON.parse(jsonMatch ? jsonMatch[0] : text);
+    } catch (error) {
+      addLog('AI-FORGE', `Generation failed: ${error.message}`, 'ERROR');
+      return null;
+    }
+  };
+  
+  const handleAiGeneration = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGeneratingAgent(true);
+    const newTemplate = await callGeminiGenerator(aiPrompt);
+    setIsGeneratingAgent(false);
+    if (newTemplate) {
+        newTemplate.id = `ai-${Date.now()}`;
+        newTemplate.creator = 'AI Architect';
+        newTemplate.royalty = 0;
+        setAgentTemplates(prev => [...prev, newTemplate]);
+        addLog('AI-FORGE', `Generated new agent template: ${newTemplate.name}`, 'SUCCESS');
+    }
+  };
+
+  // --- VIEW RENDERERS ---
+  return (
+    <div className="min-h-screen bg-[#05050a] flex items-center justify-center p-0 md:p-4 transition-colors duration-500">
+        <style>{`
+          .hide-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          .hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
+        
+        {/* VIEWPORT TOGGLE */}
+        <div className="fixed top-4 right-4 z-[100] flex bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-2xl">
+            <button onClick={() => setIsMobileMode(false)} className={`p-2 rounded-lg transition-all ${!isMobileMode ? 'bg-indigo-500/30 text-indigo-400' : 'text-gray-500 hover:text-white'}`}><Monitor size={18} /></button>
+            <button onClick={() => setIsMobileMode(true)} className={`p-2 rounded-lg transition-all ${isMobileMode ? 'bg-indigo-500/30 text-indigo-400' : 'text-gray-500 hover:text-white'}`}><Smartphone size={18} /></button>
+        </div>
+
+        {/* MAIN APP CONTAINER */}
+        <div className={`relative bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1c2e] via-[#05050a] to-black text-gray-100 font-sans overflow-hidden flex transition-all duration-500 ease-in-out shadow-[0_0_50px_rgba(0,0,0,0.8)]
+            ${isMobileMode ? 'w-[390px] h-[844px] rounded-[3rem] border-[8px] border-neutral-900 flex-col' : 'w-full h-full rounded-2xl border border-white/5 flex-row'}
+        `}>
+            
+            {/* WEB SIDEBAR */}
+            {!isMobileMode && (
+                <div className="w-72 flex flex-col p-6 z-20 relative border-r border-white/5 shrink-0">
+                    <div className="flex items-center gap-4 mb-10 px-2">
+                        <AnimatedLogo size={40} />
+                        <div>
+                            <h1 className="font-bold text-2xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">BONAS</h1>
+                            <div className="text-[10px] uppercase tracking-[0.25em] text-gray-500">Nexus Protocol v8</div>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 space-y-2">
+                        {[
+                            { id: 'dashboard', icon: Activity, label: 'Dashboard' },
+                            { id: 'diagnostics', icon: ShieldAlert, label: 'Risk & Diagnostics' },
+                            { id: 'forge', icon: Cpu, label: 'Agent Forge' },
+                            { id: 'epurse', icon: CreditCard, label: 'ePurse' },
+                            { id: 'logs', icon: Terminal, label: 'Live Ops' }
+                        ].map(item => (
+                            <button 
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`group flex items-center w-full p-4 mb-3 rounded-2xl transition-all duration-300 backdrop-blur-md relative overflow-hidden
+                                    ${activeTab === item.id ? 'bg-indigo-500/20 border border-indigo-500/50 text-white shadow-[0_0_20px_rgba(99,102,241,0.2)]' : 'bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20 hover:text-white'}`}
+                            >
+                                <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-transparent opacity-0 transition-opacity duration-300 ${activeTab === item.id ? 'opacity-100' : 'group-hover:opacity-50'}`}></div>
+                                <item.icon size={20} className={`mr-3 relative z-10 transition-colors ${activeTab === item.id ? 'text-indigo-400' : 'group-hover:text-white'}`} />
+                                <span className="font-medium tracking-wide relative z-10">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-auto space-y-4">
+                        <button onClick={() => setShowSettings(true)} className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors text-sm font-medium">
+                            <Settings size={18} /> Platform Settings
+                        </button>
+                        <GlassCard className="p-4 flex items-center gap-3 bg-indigo-900/10 border-indigo-500/20">
+                            <div className="relative"><div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div></div>
+                            <div className="text-xs">
+                                <div className="text-gray-200 font-semibold">Nexus Online</div>
+                                <div className="text-indigo-400/80 font-mono">MDP Engine Active</div>
+                            </div>
+                        </GlassCard>
+                    </div>
+                </div>
+            )}
+
+            {/* MOBILE TOP NAV */}
+            {isMobileMode && (
+                <div className="flex items-center justify-between p-5 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30 shrink-0">
+                    <div className="flex items-center gap-3">
+                        <AnimatedLogo size={28} />
+                        <h1 className="font-bold text-lg tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">BONAS</h1>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={injectFault} className="text-red-400 bg-red-500/10 p-2 rounded-lg border border-red-500/20"><AlertTriangle size={16} /></button>
+                        <button onClick={() => setShowSettings(true)} className="text-gray-400 bg-white/5 p-2 rounded-lg"><Settings size={16} /></button>
+                    </div>
+                </div>
+            )}
+
+            {/* CONTENT AREA */}
+            <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+                
+                <header className={`flex ${isMobileMode ? 'flex-col items-start p-5 gap-3' : 'items-center justify-between px-8 h-24'} relative z-20 shrink-0`}>
+                    <div>
+                        <h2 className={`font-bold tracking-tight text-white capitalize flex items-center gap-3 ${isMobileMode ? 'text-2xl' : 'text-3xl'}`}>
+                            {activeTab === 'epurse' ? 'ePurse Wallet' : activeTab.replace('-', ' ')}
+                            {activeBounties.length > 0 && <span className="bg-amber-500/20 text-amber-400 text-xs px-2 py-1 rounded border border-amber-500/30 animate-pulse flex items-center gap-1"><Radio size={12}/> BOUNTY ACTIVE</span>}
+                        </h2>
+                        <p className={`text-xs text-gray-500 font-medium tracking-wide mt-1 flex items-center gap-2 ${isMobileMode ? 'hidden' : ''}`}>
+                            OPERATIONAL CONTROL PLANE <span className="text-emerald-500 flex items-center gap-1">• <Wifi size={10} /> API V1.0 CONNECTED</span>
+                        </p>
+                    </div>
+                    
+                    {!isMobileMode && (
+                        <div className="flex items-center gap-4">
+                            <button onClick={injectFault} className="group bg-red-500/5 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+                                <AlertTriangle size={16} /> Inject Entropy
+                            </button>
+                            <div className="bg-black/40 backdrop-blur-xl border border-white/10 px-5 py-2.5 rounded-xl text-sm font-bold text-gray-200 flex items-center gap-3 cursor-pointer hover:bg-white/5" onClick={() => setActiveTab('epurse')}>
+                                <Wallet size={16} className="text-emerald-400" /> 
+                                <span className="font-mono text-lg">{ePurse.liquid.toFixed(2)}</span>
+                                <span className="text-[10px] text-gray-500 font-bold">OPS</span>
+                            </div>
+                        </div>
+                    )}
+                    {isMobileMode && activeTab !== 'epurse' && (
+                         <div className="w-full bg-indigo-900/20 border border-indigo-500/30 px-4 py-3 rounded-xl flex justify-between items-center" onClick={() => setActiveTab('epurse')}>
+                            <span className="text-xs text-indigo-300 font-bold flex items-center gap-2"><Wallet size={14}/> Liquid OPS</span>
+                            <span className="font-mono text-white font-bold">{ePurse.liquid.toFixed(2)}</span>
+                         </div>
+                    )}
+                </header>
+
+                <main className={`flex-1 overflow-y-auto overflow-x-hidden pt-0 relative ${isMobileMode ? 'p-5 pb-24 hide-scroll' : 'p-8 scrollbar-thin'}`}>
+                    
+                    {/* --- TAB: DASHBOARD --- */}
+                    {activeTab === 'dashboard' && (
+                        <div className="space-y-4 md:space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                            
+                            <GlassCard className="p-4 md:p-5 border-indigo-500/30 bg-gradient-to-r from-indigo-900/10 to-transparent">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400"><Sliders size={20} /></div>
+                                        <div>
+                                            <h3 className="font-bold text-white text-sm md:text-base">Optimization Logic Engine</h3>
+                                            <p className="text-xs text-gray-400">Select algorithm for active Optimizers.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {[
+                                            { id: 'HEURISTIC', label: 'Heuristics', cost: '0.5x Gas', desc: 'Linear, slow recovery.' },
+                                            { id: 'PID', label: 'PID Control', cost: '1.0x Gas', desc: 'Proportional recovery.' },
+                                            { id: 'EXTREMUM', label: 'Extremum Seeking', cost: '3.0x Gas', desc: 'Aggressive, rapid recovery.' }
+                                        ].map(strat => (
+                                            <button 
+                                                key={strat.id}
+                                                onClick={() => setOptStrategy(strat.id)}
+                                                className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${optStrategy === strat.id ? 'bg-indigo-600 border-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-black/40 border-white/10 text-gray-400 hover:border-white/30'}`}
+                                                title={strat.desc}
+                                            >
+                                                <span className={`text-[10px] md:text-xs font-bold ${optStrategy === strat.id ? 'text-white' : ''}`}>{strat.label}</span>
+                                                <span className={`text-[8px] md:text-[10px] font-mono ${optStrategy === strat.id ? 'text-indigo-200' : 'text-gray-500'}`}>{strat.cost}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="border-l border-white/10 pl-4 hidden md:block">
+                                        <button onClick={handleManualSurge} className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 px-4 py-2 rounded-xl text-white text-xs font-bold shadow-lg transition-all hover:scale-105">
+                                            <Rocket size={14} /> Ops Surge (-50)
+                                        </button>
+                                    </div>
+                                    {isMobileMode && (
+                                        <button onClick={handleManualSurge} className="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 rounded-xl text-white text-xs font-bold shadow-lg">
+                                            <Rocket size={14} /> Execute Optimization Surge (-50 OPS)
+                                        </button>
+                                    )}
+                                </div>
+                            </GlassCard>
+
+                            <div className={`grid gap-4 md:gap-6 ${isMobileMode ? 'grid-cols-2' : 'grid-cols-4'}`}>
+                                <KPI label="Efficiency" value={`${efficiencyData.length > 0 ? Math.round(efficiencyData[efficiencyData.length-1].efficiency) : 0}%`} sub={`dTarget: >${slaTarget}%`} color={isFaultActive ? '#ef4444' : '#10b981'} icon={Activity} />
+                                <KPI label="MDP Risk" value={`${stochasticRisk.toFixed(1)}%`} sub="Fail Probability" color={stochasticRisk > 60 ? '#ef4444' : stochasticRisk > 30 ? '#f59e0b' : '#3b82f6'} icon={Target} />
+                                <KPI label="Agents" value={agents.filter(a=>a.status==='ACTIVE').length} sub="Deployed" color="#ffffff" icon={Server} />
+                                <KPI label="Total Mined" value={`${ePurse.totalMined.toFixed(0)}`} sub="Lifetime OPS" color="#f59e0b" icon={PickaxeIcon} />
+                            </div>
+
+                            <div className={`grid gap-4 md:gap-6 ${isMobileMode ? 'grid-cols-1' : 'grid-cols-3 h-96'}`}>
+                                <GlassCard className={`${isMobileMode ? 'h-64' : 'col-span-2'} p-0 flex flex-col relative overflow-hidden border-indigo-500/30 bg-black/40`}>
+                                    <div className="absolute inset-0 pointer-events-none"><NetworkIllustration isFaultActive={isFaultActive} riskLevel={stochasticRisk} optStrategy={optStrategy} /></div>
+                                    <div className="p-4 md:p-6 flex justify-between items-center relative z-10">
+                                        <div>
+                                            <h3 className="font-bold md:text-lg text-gray-200">Efficiency Vector & Dynamic SLA</h3>
+                                            <div className="text-xs text-indigo-400 mt-1 flex items-center gap-1">
+                                                {slaTarget < 85 && <><AlertTriangle size={12}/> Graceful Degradation Active</>}
+                                            </div>
+                                        </div>
+                                        {strategyAdvice && isMobileMode ? null : (
+                                            <button onClick={runAiStrategy} className="flex items-center gap-1 text-[10px] md:text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1.5 md:px-4 md:py-2 rounded-full backdrop-blur-md">
+                                                <BrainCircuit size={12} /> Advice
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="flex-1 w-full relative z-10 min-h-[150px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={efficiencyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                                <defs><linearGradient id="colorEff" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={isFaultActive ? "#ef4444" : "#6366f1"} stopOpacity={0.3}/><stop offset="95%" stopColor={isFaultActive ? "#ef4444" : "#6366f1"} stopOpacity={0}/></linearGradient></defs>
+                                                <XAxis dataKey="time" hide />
+                                                <YAxis domain={[0, 100]} stroke="#6b7280" tick={{fontSize: 10}} tickLine={false} axisLine={false} />
+                                                <Tooltip contentStyle={{backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderRadius: '8px', fontSize: '12px'}} itemStyle={{color: '#fff'}} />
+                                                <Area type="monotone" dataKey="efficiency" stroke={isFaultActive ? "#ef4444" : "#6366f1"} strokeWidth={3} fillOpacity={1} fill="url(#colorEff)" isAnimationActive={false} />
+                                                <Line type="monotone" dataKey="baseline" stroke={slaTarget < 85 ? "#f59e0b" : "#4b5563"} strokeDasharray="5 5" strokeWidth={slaTarget < 85 ? 2 : 1} dot={false} isAnimationActive={false}/>
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </GlassCard>
+
+                                <GlassCard className={`p-0 flex flex-col overflow-hidden ${isMobileMode ? 'h-64' : ''}`}>
+                                    <div className="p-4 md:p-5 border-b border-white/5 bg-black/20 flex justify-between items-center">
+                                        <h3 className="font-bold text-gray-200 text-sm md:text-base">Active Fleet</h3>
+                                        <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">{agents.length} Nodes</span>
+                                    </div>
+                                    <div className={`flex-1 overflow-y-auto p-4 space-y-3 pr-2 ${isMobileMode ? 'hide-scroll' : 'scrollbar-thin'}`}>
+                                        {agents.length === 0 ? (
+                                            <div className="text-center text-gray-600 mt-10 text-xs">No agents deployed.</div>
+                                        ) : (
+                                            agents.map((agent) => (
+                                                <div key={agent.instanceId} onClick={() => setSelectedActiveAgent(agent)} className="bg-white/5 p-3 rounded-xl border border-white/5 flex justify-between items-center cursor-pointer">
+                                                    <div>
+                                                        <div className="font-bold text-xs md:text-sm text-gray-200">{agent.name}</div>
+                                                        <div className="text-[9px] md:text-[10px] text-gray-500 font-mono">ROI: {((agent.earned || 0) - (agent.spent || 0)).toFixed(1)}</div>
+                                                    </div>
+                                                    <div className={`text-[9px] px-2 py-1 rounded-full font-bold border ${agent.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>{agent.status}</div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </GlassCard>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB: DIAGNOSTICS & RISK --- */}
+                    {activeTab === 'diagnostics' && (
+                        <div className="space-y-4 md:space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                <GlassCard className="p-6 border-indigo-500/30">
+                                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Target size={18} className="text-indigo-400"/> Stochastic Markov State</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1 text-gray-400"><span>S0 (Optimal)</span> <span>{Math.max(0, 100 - stochasticRisk * 1.5).toFixed(1)}%</span></div>
+                                            <div className="w-full bg-white/5 rounded-full h-1.5"><div className="bg-emerald-500 h-full rounded-full" style={{width: `${Math.max(0, 100 - stochasticRisk * 1.5)}%`}}></div></div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1 text-gray-400"><span>S1 (Degraded)</span> <span className="text-amber-400">{stochasticRisk.toFixed(1)}%</span></div>
+                                            <div className="w-full bg-white/5 rounded-full h-1.5"><div className="bg-amber-500 h-full rounded-full" style={{width: `${stochasticRisk}%`}}></div></div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1 text-gray-400"><span>S2 (Critical Failure)</span> <span className="text-red-400">{(stochasticRisk * 0.2).toFixed(1)}%</span></div>
+                                            <div className="w-full bg-white/5 rounded-full h-1.5"><div className="bg-red-500 h-full rounded-full" style={{width: `${stochasticRisk * 0.2}%`}}></div></div>
+                                        </div>
+                                    </div>
+                                </GlassCard>
+
+                                <GlassCard className="p-6 border-indigo-500/30">
+                                    <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Layers size={18} className="text-indigo-400"/> Active Heuristics</h3>
+                                    <div className="space-y-3">
+                                        <div className={`p-3 rounded-lg border flex justify-between items-center ${slaTarget < 85 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/5'}`}>
+                                            <div>
+                                                <div className={`font-bold text-sm ${slaTarget < 85 ? 'text-amber-400' : 'text-gray-400'}`}>Graceful Degradation</div>
+                                                <div className="text-xs text-gray-500">Lower SLA to preserve uptime.</div>
+                                            </div>
+                                            <div className={`text-xs px-2 py-1 rounded font-bold ${slaTarget < 85 ? 'bg-amber-500/20 text-amber-300' : 'bg-gray-800 text-gray-600'}`}>{slaTarget < 85 ? 'ACTIVE' : 'STANDBY'}</div>
+                                        </div>
+                                        <div className={`p-3 rounded-lg border flex justify-between items-center ${activeBounties.length > 0 ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/5'}`}>
+                                            <div>
+                                                <div className={`font-bold text-sm ${activeBounties.length > 0 ? 'text-indigo-400' : 'text-gray-400'}`}>Swarm Load-Balancing</div>
+                                                <div className="text-xs text-gray-500">Broadcast bounties for help.</div>
+                                            </div>
+                                            <div className={`text-xs px-2 py-1 rounded font-bold ${activeBounties.length > 0 ? 'bg-indigo-500/20 text-indigo-300' : 'bg-gray-800 text-gray-600'}`}>{activeBounties.length > 0 ? 'ACTIVE' : 'STANDBY'}</div>
+                                        </div>
+                                    </div>
+                                </GlassCard>
+                            </div>
+
+                            <GlassCard className={`p-0 flex flex-col overflow-hidden ${isMobileMode ? 'h-64' : 'h-80'}`}>
+                                <div className="p-4 border-b border-white/5 bg-white/5 font-bold text-gray-200 text-sm flex justify-between">
+                                    <span>Anomaly & Resolution Log</span>
+                                    <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">MTTR: {mttr.toFixed(1)}s</span>
+                                </div>
+                                <div className={`overflow-y-auto flex-1 p-3 ${isMobileMode ? 'hide-scroll' : 'scrollbar-thin'}`}>
+                                    {anomalies.map((a) => (
+                                        <div key={a.id} className="p-3 mb-2 bg-black/20 rounded-lg border border-white/5 flex flex-col gap-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-indigo-300 text-xs">{a.component}</span>
+                                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${a.status === 'ACTIVE' ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-emerald-500/20 text-emerald-400'}`}>{a.status}</span>
+                                            </div>
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-gray-300 text-xs">{a.issue}</span>
+                                                <span className="text-gray-500 font-mono text-[10px]">{a.time}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </GlassCard>
+                        </div>
+                    )}
+
+                    {/* --- TAB: FORGE --- */}
+                    {activeTab === 'forge' && (
+                        <div className="space-y-4 md:space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                            
+                            <div className="flex justify-between items-end">
+                                <div><h1 className="text-3xl font-bold mb-2 text-white">Agent Forge & Studio</h1><p className="text-gray-400">Deploy existing templates or tokenize your own logic IP.</p></div>
+                                <button onClick={() => setIsBuildingManual(!isBuildingManual)} className="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/30 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"><Code2 size={16} /> Developer Studio</button>
+                            </div>
+
+                            {/* DEV STUDIO / MINTING UI */}
+                            {isBuildingManual && (
+                                <GlassCard className="p-0 mb-8 border-indigo-500/50 animate-in fade-in slide-in-from-top-4 overflow-hidden">
+                                    <div className="bg-indigo-900/40 p-4 border-b border-indigo-500/30 flex justify-between items-center">
+                                        <h3 className="font-bold text-white text-lg flex items-center gap-2"><PenTool size={18} className="text-indigo-400"/> ebot IP Tokenization Studio</h3>
+                                        <button onClick={() => setIsBuildingManual(false)} className="text-gray-500 hover:text-white"><X size={20} /></button>
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-bold text-indigo-300 border-b border-white/10 pb-2">1. Define Logic & Identity</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Agent Name</label><input type="text" className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none" value={manualAgent.name} onChange={e => setManualAgent({...manualAgent, name: e.target.value})} placeholder="e.g. CacheClearer" /></div>
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Type</label><select className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none" value={manualAgent.type} onChange={e => setManualAgent({...manualAgent, type: e.target.value})}><option value="OPTIMIZER">Optimizer</option><option value="DIAGNOSTIC">Diagnostic</option><option value="HARVESTER">Harvester</option></select></div>
+                                            </div>
+                                            <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Heuristic Logic (Pseudo-code)</label><textarea className="w-full h-32 bg-black/60 border border-white/10 rounded-lg p-3 text-xs text-emerald-400 font-mono focus:border-indigo-500 outline-none resize-none" value={manualAgent.logic} onChange={e => setManualAgent({...manualAgent, logic: e.target.value})} /></div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-bold text-indigo-300 border-b border-white/10 pb-2">2. Tokenomics & Minting</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Stake Required (OPS)</label><input type="number" className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none" value={manualAgent.cost} onChange={e => setManualAgent({...manualAgent, cost: e.target.value})} /></div>
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Base Reward Rate</label><input type="number" step="0.1" className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 outline-none" value={manualAgent.rewardRate} onChange={e => setManualAgent({...manualAgent, rewardRate: e.target.value})} /></div>
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Creator Royalty (%)</label><input type="number" className="w-full bg-black/40 border border-amber-500/30 rounded-lg p-2.5 text-sm text-amber-400 focus:border-amber-500 outline-none" value={manualAgent.royalty} onChange={e => setManualAgent({...manualAgent, royalty: e.target.value})} /></div>
+                                                <div><label className="block text-gray-400 text-[10px] uppercase tracking-wider font-bold mb-1">Theme Color</label><input type="color" className="w-full h-10 bg-black/40 border border-white/10 rounded-lg p-1 cursor-pointer" value={manualAgent.color} onChange={e => setManualAgent({...manualAgent, color: e.target.value})} /></div>
+                                            </div>
+                                            <div className="pt-4 flex gap-3">
+                                                <div className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col justify-center items-center">
+                                                    <span className="text-[10px] text-gray-400 uppercase">Registration Fee</span>
+                                                    <span className="font-mono font-bold text-white">25.00 OPS</span>
+                                                </div>
+                                                <button onClick={handleTestAndMint} disabled={isTestingEbot} className="flex-[2] bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl text-white font-bold flex flex-col justify-center items-center transition-all disabled:opacity-50">
+                                                    {isTestingEbot ? <span className="animate-spin"><Loader2 size={20}/></span> : <><Fingerprint size={18} className="mb-1"/> <span>Simulate & Mint IP</span></>}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </GlassCard>
+                            )}
+
+                            {activeBounties.length > 0 && (
+                                <GlassCard className="p-5 border-amber-500/40 bg-amber-500/10">
+                                    <h3 className="font-bold text-amber-400 mb-3 flex items-center gap-2"><Radio size={18}/> Network Bounties Available</h3>
+                                    {activeBounties.map(b => (
+                                        <div key={b.id} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-amber-500/20">
+                                            <div>
+                                                <div className="font-bold text-white text-sm">{b.task}</div>
+                                                <div className="text-xs text-gray-400">High Local Entropy - Immediate Assistance Required</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-amber-400 font-mono font-bold">+{b.reward} OPS</div>
+                                                <div className="text-[9px] uppercase tracking-wider text-gray-500">Volatility Premium</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </GlassCard>
+                            )}
+
+                            <GlassCard className="p-5 md:p-8 bg-gradient-to-r from-indigo-900/20 to-purple-900/20 border-indigo-500/30">
+                                <div className="flex items-center gap-2 mb-4"><Sparkles className="text-indigo-400" size={18}/> <h3 className="font-bold text-white text-base md:text-lg">AI Architect</h3></div>
+                                <div className={`flex gap-3 ${isMobileMode ? 'flex-col' : ''}`}>
+                                    <input type="text" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Describe agent logic..." className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-indigo-500 outline-none" />
+                                    <button onClick={handleAiGeneration} disabled={isGeneratingAgent} className="bg-indigo-600 px-6 py-3 rounded-xl font-bold text-sm text-white flex justify-center items-center gap-2 w-full md:w-auto">
+                                        {isGeneratingAgent ? <span className="animate-spin">⟳</span> : 'Generate'}
+                                    </button>
+                                </div>
+                            </GlassCard>
+
+                            <div className={`grid gap-4 md:gap-6 ${isMobileMode ? 'grid-cols-1' : 'grid-cols-3'}`}>
+                                {agentTemplates.map((tpl) => (
+                                    <GlassCard key={tpl.id} onClick={() => setSelectedTemplate(tpl)} className={`p-5 cursor-pointer transition-all ${selectedTemplate?.id === tpl.id ? 'border-indigo-500 bg-indigo-500/10' : 'hover:border-white/20'}`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${tpl.color}15`, color: tpl.color, border: `1px solid ${tpl.color}30` }}><Cpu size={isMobileMode ? 20 : 24} /></div>
+                                            {tpl.creator !== 'System' && <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Fingerprint size={10}/> IP: {tpl.creator}</span>}
+                                        </div>
+                                        <h3 className="font-bold text-base md:text-lg text-white mb-1">{tpl.name}</h3>
+                                        <div className="text-[10px] md:text-xs font-mono text-gray-500 mb-4">{tpl.type} • {tpl.target}</div>
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-xs bg-white/5 p-2 rounded text-gray-300"><span>Stake Cost</span><span className="font-bold text-white">{tpl.cost} OPS</span></div>
+                                            <div className="flex justify-between text-xs bg-white/5 p-2 rounded text-gray-300"><span>Reward Rate</span><span className="font-bold text-emerald-400">+{tpl.rewardRate}/cyc</span></div>
+                                            {tpl.royalty > 0 && <div className="flex justify-between text-[10px] bg-amber-500/5 p-2 rounded text-amber-500/80"><span>Creator Royalty</span><span className="font-bold">{tpl.royalty}%</span></div>}
+                                        </div>
+                                    </GlassCard>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- TAB: EPURSE --- */}
+                    {activeTab === 'epurse' && (
+                        <div className="space-y-4 md:space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                            <GlassCard className="p-6 md:p-10 relative overflow-hidden bg-gradient-to-br from-indigo-900/40 to-black/40 border-indigo-500/30">
+                                <div className="absolute top-0 right-0 p-4 opacity-10"><CreditCard size={isMobileMode ? 80 : 160} /></div>
+                                <h2 className="text-gray-400 uppercase tracking-widest font-bold text-[10px] md:text-xs mb-2">Total Liquid Assets</h2>
+                                <div className="text-5xl md:text-7xl font-bold text-white mb-6 md:mb-8 tracking-tight">{ePurse.liquid.toFixed(2)} <span className="text-2xl md:text-4xl text-indigo-400 font-normal">OPS</span></div>
+                                <div className={`flex gap-3 md:gap-4 ${isMobileMode ? 'flex-col' : ''}`}>
+                                    <button onClick={() => setShowDepositModal(true)} className="bg-white text-black px-5 py-3 md:px-8 md:py-4 rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"><Plus size={18} /> Deposit</button>
+                                    <button onClick={() => setShowExchangeModal(true)} className="bg-white/10 text-white border border-white/10 px-5 py-3 md:px-8 md:py-4 rounded-xl font-bold hover:bg-white/20 transition-colors flex items-center justify-center gap-2"><ArrowRightLeft size={18} /> Exchange</button>
+                                </div>
+                            </GlassCard>
+
+                            <div className={`grid gap-4 md:gap-8 ${isMobileMode ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                <GlassCard className="p-6 bg-emerald-900/10 border-emerald-500/20">
+                                    <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><Lock size={18} /></div><div><div className="text-xs text-gray-400 font-bold uppercase">Total Staked</div></div></div>
+                                    <div className="text-3xl font-bold text-white mb-2">{ePurse.staked.toFixed(2)}</div>
+                                    <div className="w-full bg-black/40 rounded-full h-1.5 mt-2"><div className="bg-emerald-500 h-full rounded-full" style={{ width: '65%' }}></div></div>
+                                </GlassCard>
+                                <GlassCard className="p-6">
+                                    <div className="flex items-center gap-3 mb-4"><div className="p-2 bg-amber-500/20 rounded-lg text-amber-400"><Zap size={18} /></div><div><div className="text-xs text-gray-400 font-bold uppercase">Lifetime Mined</div></div></div>
+                                    <div className="text-3xl font-bold text-white mb-2">{ePurse.totalMined.toFixed(2)}</div>
+                                    <div className="text-xs text-red-400 font-mono mt-2">- {ePurse.gasBurned.toFixed(2)} (Gas Burned)</div>
+                                </GlassCard>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* --- TAB: LOGS --- */}
+                    {activeTab === 'logs' && (
+                        <div className="space-y-4 md:space-y-6 animate-in fade-in zoom-in-95 duration-500 h-full">
+                            <GlassCard className="p-0 flex flex-col h-full min-h-[60vh] overflow-hidden">
+                                <div className={`flex justify-between items-center p-4 border-b border-white/5 bg-black/20 overflow-x-auto ${isMobileMode ? 'hide-scroll' : ''}`}>
+                                    <div className="flex items-center gap-4 shrink-0">
+                                        <span className="text-gray-400 font-bold text-xs tracking-widest flex items-center gap-2"><Terminal size={14} /> LEDGER</span>
+                                        <div className="flex gap-1">
+                                            {['ALL', 'ERROR', 'SUCCESS', 'OPTIMIZATION', 'HEURISTIC'].map(f => (
+                                                <button key={f} onClick={() => setLogFilter(f)} className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${logFilter === f ? 'bg-white/10 text-white border-white/20' : 'text-gray-500 border-transparent hover:text-gray-300'}`}>{f}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`overflow-y-auto flex-1 p-4 font-mono text-xs space-y-1 ${isMobileMode ? 'hide-scroll' : 'scrollbar-thin scrollbar-thumb-white/10'}`}>
+                                    {logs.filter(log => logFilter === 'ALL' || log.type === logFilter || log.source === logFilter).map((log) => (
+                                        <div key={log.id} className="flex gap-3 hover:bg-white/5 p-1 rounded transition-colors">
+                                            <span className="text-gray-600 shrink-0">[{log.time}]</span>
+                                            <span className={`font-bold shrink-0 ${
+                                                log.type === 'ERROR' ? 'text-red-400' : 
+                                                log.type === 'SUCCESS' ? 'text-emerald-400' : 
+                                                log.type === 'WARNING' ? 'text-amber-400' : 
+                                                log.source === 'OPTIMIZATION' ? 'text-cyan-400' : 
+                                                log.source === 'HEURISTIC' ? 'text-purple-400' : 'text-indigo-400'
+                                            }`}>{log.source}</span>
+                                            <span className="text-gray-300">{log.message}</span>
+                                        </div>
+                                    ))}
+                                    <div ref={logEndRef} />
+                                </div>
+                            </GlassCard>
+                        </div>
+                    )}
+                </main>
+
+                {/* MOBILE BOTTOM NAVIGATION */}
+                {isMobileMode && (
+                    <div className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-2xl border-t border-white/10 flex justify-around items-center p-2 pb-safe z-40 rounded-b-[2.5rem]">
+                        {[
+                            { id: 'dashboard', icon: Activity, label: 'Dash' },
+                            { id: 'diagnostics', icon: ShieldAlert, label: 'Risk' },
+                            { id: 'forge', icon: Cpu, label: 'Forge' },
+                            { id: 'epurse', icon: Wallet, label: 'Wallet' },
+                            { id: 'logs', icon: Terminal, label: 'Logs' }
+                        ].map(item => (
+                            <button 
+                                key={item.id} 
+                                onClick={() => setActiveTab(item.id)} 
+                                className={`flex flex-col items-center justify-center p-2 w-14 transition-all ${activeTab === item.id ? 'text-indigo-400 -translate-y-1' : 'text-gray-500'}`}
+                            >
+                                <item.icon size={22} className={activeTab === item.id ? 'drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : ''} />
+                                <span className="text-[9px] mt-1 font-medium">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+
+        {/* --- MODALS --- */}
+        <Modal title="Deploy Agent" isOpen={!!selectedTemplate} onClose={() => setSelectedTemplate(null)}>
+            {selectedTemplate && (
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                        <Cpu className="text-indigo-400" size={32} />
+                        <div><div className="font-bold text-white">{selectedTemplate.name}</div><div className="text-xs text-gray-500">Requires {selectedTemplate.cost} OPS Stake</div></div>
+                    </div>
+                    <button onClick={() => { deployAgent(selectedTemplate); setSelectedTemplate(null); setActiveTab('dashboard'); }} className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold text-white shadow-lg transition-all">Confirm & Deploy</button>
+                </div>
+            )}
+        </Modal>
+
+        <Modal title="Agent Analytics" isOpen={!!selectedActiveAgent} onClose={() => setSelectedActiveAgent(null)}>
+            {selectedActiveAgent && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10"><div className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Mined</div><div className="text-xl font-bold text-emerald-400">{(selectedActiveAgent.earned || 0).toFixed(2)}</div></div>
+                        <div className="bg-white/5 p-4 rounded-xl border border-white/10"><div className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Spent</div><div className="text-xl font-bold text-red-400">{(selectedActiveAgent.spent || 0).toFixed(2)}</div></div>
+                    </div>
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                        <button onClick={() => handleRetireAgent(selectedActiveAgent)} className="w-full bg-red-900/20 text-red-400 border border-red-500/30 py-3 rounded-xl font-bold flex justify-center items-center gap-2"><PowerOff size={18} /> Retire Agent (+{selectedActiveAgent.cost} Refund)</button>
+                    </div>
+                </div>
+            )}
+        </Modal>
+
+        <Modal title="Settings" isOpen={showSettings} onClose={() => setShowSettings(false)}>
+            <div className="space-y-4">
+                <div><label className="block text-gray-400 text-xs font-bold mb-2">Gemini API Key</label><input type="password" className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white outline-none" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="API Key..." /></div>
+                <button onClick={() => saveApiKey(apiKey)} className="w-full bg-indigo-600 py-3 rounded-lg text-white font-bold">Save</button>
+            </div>
+        </Modal>
+
+        <Modal title="Deposit Liquidity" isOpen={showDepositModal} onClose={() => setShowDepositModal(false)}>
+            <div className="space-y-4">
+                <input type="number" className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} placeholder="Amount in OPS" />
+                <button onClick={handleDeposit} className="w-full bg-emerald-600 py-3 rounded-lg text-white font-bold">Confirm</button>
+            </div>
+        </Modal>
+
+        <Modal title="Exchange" isOpen={showExchangeModal} onClose={() => setShowExchangeModal(false)}>
+            <div className="space-y-4">
+                <input type="number" className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white outline-none" value={exchangeAmount} onChange={e => setExchangeAmount(e.target.value)} placeholder="Amount to Sell" />
+                <button onClick={handleExchange} className="w-full bg-indigo-600 py-3 rounded-lg text-white font-bold">Swap for USDC</button>
+            </div>
+        </Modal>
+
+    </div>
+  );
+}
+
+const PickaxeIcon = ({size, className}) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 5.5l4 4" /><path d="M3 21l9-9" /><path d="M13 6.5l4.5 4.5" /><path d="M19 5l1.5 1.5" /><path d="M16 3l5 5" /><path d="M2 22l6.5-6.5" /></svg>);
