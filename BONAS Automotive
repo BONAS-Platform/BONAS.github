@@ -1,0 +1,42 @@
+bonas-automotive-bot/
+├─ README.md
+├─ LICENSE
+├─ .gitignore
+├─ docs/
+│  ├─ OVERVIEW.md
+│  ├─ VALUE_PROPOSITION.md
+│  ├─ ARCHITECTURE_AUTOMOTIVE.md
+│  ├─ IP_POSITIONING_PUBLIC.md
+│  └─ ROADMAP.md
+├─ ip/
+│  ├─ IP_DISCLOSURE_NOTE.md
+│  ├─ PATENT_CLAIMS_DRAFT_SUMMARY.md
+│  └─ TRADE_SECRET_GUIDELINES.md
+├─ src/
+│  ├─ api/
+│  │  ├─ index.ts
+│  │  ├─ diagnostics.ts
+│  │  ├─ risk_scoring.ts
+│  │  ├─ predictive_maintenance.ts
+│  │  └─ compliance_reporting.ts
+│  ├─ agents/
+│  │  ├─ ebot_agent.ts
+│  │  ├─ workflows_insurance.ts
+│  │  ├─ workflows_fleet.ts
+│  │  └─ workflows_maintenance.ts
+│  ├─ analytics/
+│  │  ├─ heuristics_engine.ts
+│  │  ├─ stochastic_models.ts
+│  │  └─ lifecycle_scoring.ts
+│  ├─ tokenization/
+│  │  ├─ bonas_engine.ts
+│  │  ├─ metrics_mapping.ts
+│  │  └─ policy_rules.ts
+│  └─ common/
+│     ├─ types.ts
+│     ├─ config.ts
+│     └─ logging.ts
+└─ examples/
+   ├─ insurer_integration.md
+   ├─ fleet_integration.md
+   └─ maintenance_network_integration.md
